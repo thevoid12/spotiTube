@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"spotiTube/constant"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -57,7 +58,6 @@ func HomePageHandler(c *gin.Context) {
 		//now use this code to get authid,token,expir
 
 		requestbody := map[string][]string{
-			"response_type": {"code"},
 			"code":          {code},
 			"client_id":     {constant.SPOTIFY_CLIENT_ID},
 			"client_secret": {constant.SPOTIFY_CLIENT_SECRET},
@@ -65,18 +65,22 @@ func HomePageHandler(c *gin.Context) {
 			"redirect_uri":  {constant.HOME_PAGE_REDIRECT_URI},
 		}
 		encodedParams := url.Values(requestbody).Encode()
-		fmt.Println(constant.SPOTIFY_AUTH_URL + "?" + encodedParams)
-
-		response, err := http.Get(constant.SPOTIFY_AUTH_URL + "?" + encodedParams)
+		req, err := http.NewRequest("POST", constant.SPOTIFY_TOKEN_URL, strings.NewReader(encodedParams))
 		if err != nil {
 			// Handle error
-			fmt.Println("Error sending request:", err)
+			c.String(404, "POST request failed with status: %d", err)
 			return
 		}
-		defer response.Body.Close()
-		// Check the response status code
-		if response.StatusCode != http.StatusOK {
-			c.String(response.StatusCode, "POST request failed with status: %d", response.StatusCode)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		// Create a HTTP client
+		client := &http.Client{}
+
+		// Send the request
+		response, err := client.Do(req)
+		if err != nil {
+			// Handle error
+			c.String(404, "POST request failed with status: %d", err)
 			return
 		}
 
@@ -87,12 +91,15 @@ func HomePageHandler(c *gin.Context) {
 			return
 		}
 		fmt.Println(string(responseBody))
-		c.String(200, string(responseBody))
-		responsemap := make(map[string]interface{})
-		json.Unmarshal(responseBody, &responsemap)
-		// c.String(http.StatusOK, responsemap["access_token"])
-		// c.String(http.StatusOK, responsemap["expires_in"])
-		// c.String(http.StatusOK, responsemap["refresh_token"])
-		// c.String(http.StatusOK, responsemap["scope"])
+		//c.String(200, string(responseBody))
+		var responsemap map[string]interface{}
+		err = json.Unmarshal(responseBody, &responsemap)
+		if err != nil {
+			fmt.Println(err)
+		}
+		c.String(http.StatusOK, fmt.Sprintf("%v", responsemap["access_token"]))
+		c.String(http.StatusOK, fmt.Sprintf("%v", responsemap["expires_in"]))
+		c.String(http.StatusOK, fmt.Sprintf("%v", responsemap["refresh_token"]))
+		c.String(http.StatusOK, fmt.Sprintf("%v", responsemap["scope"]))
 	}
 }
