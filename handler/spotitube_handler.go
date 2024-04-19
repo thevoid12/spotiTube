@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"spotiTube/constant"
+	"spotiTube/tools"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -27,6 +28,7 @@ func IndexPageHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
+
 }
 
 func LoginHandler(c *gin.Context) {
@@ -46,7 +48,7 @@ func LoginHandler(c *gin.Context) {
 	c.Redirect(http.StatusMovedPermanently, constant.SPOTIFY_AUTH_URL+"?"+encodedParams)
 }
 
-func HomePageHandler(c *gin.Context) {
+func HomePageHandler(c *gin.Context, w http.ResponseWriter, r *http.Request) {
 	//if not a succesful authendication attempt
 	code := c.Query("code")
 	err := c.Query("error")
@@ -97,6 +99,8 @@ func HomePageHandler(c *gin.Context) {
 		if err != nil {
 			fmt.Println(err)
 		}
+		//responsemap["expires_in"] =
+		tools.SetCookie(w, "COOKIE_VALUE", responsemap)
 		c.String(http.StatusOK, fmt.Sprintf("%v", responsemap["access_token"]))
 		c.String(http.StatusOK, fmt.Sprintf("%v", responsemap["expires_in"]))
 		c.String(http.StatusOK, fmt.Sprintf("%v", responsemap["refresh_token"]))
